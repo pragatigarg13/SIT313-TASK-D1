@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./utils/firebase";
 import "./Login.css";
 
 function Login() {
@@ -11,28 +9,45 @@ function Login() {
 
   const navigate = useNavigate();
 
-  // Handle the login form
   const handleLogin = async (e) => {
     e.preventDefault();
     setMessage("");
 
     try {
-      // Check the user email and password with Firebase
-      await signInWithEmailAndPassword(auth, email, password);
+      const response = await fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
 
-      // Login successful
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage("Incorrect email or password. Please try again.");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      window.dispatchEvent(new Event("userLogin"));
+
       alert("Login successful!");
       navigate("/");
     } catch (error) {
-      // Display an error if login fails
-      setMessage("Invalid email or password. Please try again or register first.");
+      console.error("Login error:", error);
+      setMessage("Unable to connect to the server. Please try again.");
     }
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
-
         <Link to="/signup" className="signup-link">
           Sign up
         </Link>
@@ -62,7 +77,6 @@ function Login() {
 
           <button type="submit">Login</button>
         </form>
-
       </div>
     </div>
   );

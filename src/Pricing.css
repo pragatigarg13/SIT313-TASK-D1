@@ -1,0 +1,103 @@
+.pricing-container {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f8f9fa;
+}
+
+.pricing-container h1 {
+  margin-bottom: 10px;
+}
+
+.pricing-plans {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.pricing-card {
+  width: 280px;
+  padding: 25px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-card h2 {
+  color: #007bff;
+}
+
+.pricing-card h3 {
+  font-size: 24px;
+}
+
+.pricing-card p {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.pricing-card button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 15px;
+  margin-top: 12px;
+}
+
+.pricing-card button:hover {
+  background-color: #0056b3;
+}
+
+.pricing-container form {
+  width: 100%;
+  max-width: 400px;
+  margin: 30px auto;
+  padding: 25px;
+  box-sizing: border-box;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.pricing-container form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.pricing-container form input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin: 8px 0 18px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 15px;
+}
+
+.pricing-container form button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.pricing-container form button:hover {
+  background-color: #0056b3;
+}
+
+.pricing-container form button[type="button"] {
+  background-color: #6c757d;
+}
