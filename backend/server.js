@@ -6,7 +6,9 @@ const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 require("dotenv").config();
 
-const serviceAccount = require("./firebase-admin-key.json");
+const serviceAccount = JSON.parse(
+  process.env.FIREBASE_SERVICE_ACCOUNT
+);
 
 initializeApp({
   credential: cert(serviceAccount)
@@ -18,100 +20,87 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Register
+// Register a new user
 app.post("/register", async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
-    if (
-      !firstName?.trim() ||
-      !lastName?.trim() ||
-      !email?.trim() ||
-      !password
-    ) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
-        message: "Please complete all required fields."
+        message: "Please fill in all fields"
       });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(cleanEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
-        message: "Please enter a valid email address."
+        message: "Please enter a valid email"
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
-        message: "Password must be at least 6 characters."
+        message: "Password must be at least 6 characters"
       });
     }
 
-    const users = await db.collection("users")
-      .where("email", "==", cleanEmail)
+    const usersRef = db.collection("users");
+    const existingUser = await usersRef
+      .where("email", "==", email)
+      .limit(1)
       .get();
 
-    if (users.docs.some(user => user.data().passwordHash)) {
+    if (!existingUser.empty) {
       return res.status(409).json({
-        message: "This email is already registered."
+        message: "Email is already registered"
       });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const userRef = users.empty
-      ? db.collection("users").doc()
-      : users.docs[0].ref;
-
-    await userRef.set({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: cleanEmail,
+    await usersRef.add({
+      firstName,
+      lastName,
+      email,
       passwordHash,
-      plan: users.empty
-        ? "Free"
-        : users.docs[0].data().plan || "Free",
+      plan: "Free",
       createdAt: FieldValue.serverTimestamp()
-    }, { merge: true });
+    });
 
     res.status(201).json({
-      message: "Registration successful. Please log in."
+      message: "Account created successfully"
     });
   } catch (error) {
     console.error("Registration error:", error.message);
     res.status(500).json({
-      message: "Registration failed."
+      message: "Unable to register user"
     });
   }
 });
 
-// Login
+// Log in an existing user
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email?.trim() || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: "Please enter your email and password."
+        message: "Email and password are required"
       });
     }
 
-    const users = await db.collection("users")
-      .where("email", "==", email.trim().toLowerCase())
+    const usersRef = db.collection("users");
+    const userSnapshot = await usersRef
+      .where("email", "==", email)
+      .limit(1)
       .get();
 
-    const userDoc = users.docs.find(
-      user => user.data().passwordHash
-    );
-
-    if (!userDoc) {
+    if (userSnapshot.empty) {
       return res.status(401).json({
-        message: "Invalid email or password. Register through D1 first."
+        message: "Invalid email or password"
       });
     }
 
+    const userDoc = userSnapshot.docs[0];
     const user = userDoc.data();
 
     const passwordMatches = await bcrypt.compare(
@@ -121,12 +110,12 @@ app.post("/login", async (req, res) => {
 
     if (!passwordMatches) {
       return res.status(401).json({
-        message: "Invalid email or password."
+        message: "Invalid email or password"
       });
     }
 
     if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is missing.");
+      throw new Error("JWT_SECRET is not configured");
     }
 
     const token = jwt.sign(
@@ -136,97 +125,76 @@ app.post("/login", async (req, res) => {
     );
 
     res.json({
-      message: "Login successful.",
+      message: "Login successful",
       token,
       user: {
-        userId: userDoc.id,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        id: userDoc.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
-        plan: user.plan || "Free"
+        plan: user.plan
       }
     });
   } catch (error) {
     console.error("Login error:", error.message);
     res.status(500).json({
-      message: "Login failed."
+      message: "Unable to log in"
     });
   }
 });
 
-// Upgrade to Paid Plan
+// Upgrade a user's plan
 app.post("/upgrade", async (req, res) => {
   try {
-    const authorization = req.headers.authorization;
-    const token = authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
-        message: "Please log in first."
+        message: "Authentication token required"
       });
     }
 
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const userRef = db.collection("users").doc(decoded.userId);
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      return res.status(404).json({
-        message: "User not found."
-      });
-    }
-
-    if (userDoc.data().plan === "Paid") {
-      return res.status(400).json({
-        message: "You already have the Paid Plan."
-      });
-    }
-
-    await userRef.update({
+    await db.collection("users").doc(decoded.userId).update({
       plan: "Paid"
     });
 
     res.json({
-      message: "Your plan has been upgraded to Paid."
+      message: "Plan upgraded successfully",
+      plan: "Paid"
     });
   } catch (error) {
     console.error("Upgrade error:", error.message);
     res.status(401).json({
-      message: "Invalid or expired login session."
+      message: "Unable to upgrade plan. Please log in again."
     });
   }
 });
 
-// Newsletter subscription
+// Subscribe to the newsletter using EmailJS
 app.post("/subscribe", async (req, res) => {
   try {
-    const email = req.body?.email;
+    const { email } = req.body;
 
-    if (typeof email !== "string" || !email.trim()) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
-        message: "Please enter your email address."
+        message: "Please enter a valid email"
       });
     }
 
-    const cleanEmail = email.trim();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const requiredKeys = [
+      "EMAILJS_SERVICE_ID",
+      "EMAILJS_TEMPLATE_ID",
+      "EMAILJS_PUBLIC_KEY",
+      "EMAILJS_PRIVATE_KEY"
+    ];
 
-    if (!emailPattern.test(cleanEmail)) {
-      return res.status(400).json({
-        message: "Please enter a valid email address."
-      });
-    }
-
-    const serviceId = process.env.EMAILJS_SERVICE_ID;
-    const templateId = process.env.EMAILJS_TEMPLATE_ID;
-    const publicKey = process.env.EMAILJS_PUBLIC_KEY;
-    const privateKey = process.env.EMAILJS_PRIVATE_KEY;
-
-    if (!serviceId || !templateId || !publicKey || !privateKey) {
-      return res.status(500).json({
-        message: "Email service is not configured."
-      });
+    for (const key of requiredKeys) {
+      if (!process.env[key]) {
+        throw new Error(`${key} is not configured`);
+      }
     }
 
     const response = await fetch(
@@ -237,37 +205,40 @@ app.post("/subscribe", async (req, res) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          service_id: serviceId,
-          template_id: templateId,
-          user_id: publicKey,
-          accessToken: privateKey,
+          service_id: process.env.EMAILJS_SERVICE_ID,
+          template_id: process.env.EMAILJS_TEMPLATE_ID,
+          user_id: process.env.EMAILJS_PUBLIC_KEY,
+          accessToken: process.env.EMAILJS_PRIVATE_KEY,
           template_params: {
-            subscriber_email: cleanEmail
+            email
           }
         })
       }
     );
 
-    const result = await response.text();
-
     if (!response.ok) {
-      console.error("EmailJS error:", result);
+      const errorText = await response.text();
+      console.error("EmailJS error:", errorText);
+
       return res.status(502).json({
-        message: "We could not send your welcome email."
+        message: "Unable to subscribe right now"
       });
     }
 
     res.json({
-      message: "Thank you for subscribing! Your welcome email has been sent."
+      message: "Subscription successful"
     });
   } catch (error) {
     console.error("Subscription error:", error.message);
     res.status(500).json({
-      message: "Something went wrong. Please try again later."
+      message: "Unable to process subscription"
     });
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+// Start the server on Render's assigned port
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
