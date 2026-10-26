@@ -15,13 +15,16 @@ function Login() {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:3000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await fetch(
+        "https://devdeakin-backend-matn.onrender.com/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        }
+      );
 
       const data = await response.json();
 
@@ -51,13 +54,16 @@ function Login() {
 
       const idToken = await googleUser.getIdToken();
 
-      const response = await fetch("http://localhost:3000/google-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ idToken })
-      });
+      const response = await fetch(
+        "https://devdeakin-backend-matn.onrender.com/google-login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ idToken })
+        }
+      );
 
       const data = await response.json();
 

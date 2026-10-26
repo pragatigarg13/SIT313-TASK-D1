@@ -9,17 +9,20 @@ function Subscribe() {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:3000/subscribe", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email })
-      });
+      const response = await fetch(
+        "https://devdeakin-backend-matn.onrender.com/subscribe",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email })
+        }
+      );
 
       const data = await response.json();
       setMessage(data.message);
-      
+
       if (response.ok) {
         setEmail("");
       }
@@ -59,6 +62,3 @@ function Subscribe() {
 }
 
 export default Subscribe;
-
-
-

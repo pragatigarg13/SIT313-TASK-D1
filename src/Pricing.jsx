@@ -41,12 +41,15 @@ function Pricing() {
     }
 
     try {
-      const response = await fetch("http://localhost:3000/upgrade", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
+      const response = await fetch(
+        "https://devdeakin-backend-matn.onrender.com/upgrade",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          }
         }
-      });
+      );
 
       const data = await response.json();
 
@@ -95,10 +98,12 @@ function Pricing() {
           ) : plan === "Paid" ? (
             <p>You are already on the Paid Plan.</p>
           ) : (
-            <button onClick={() => {
-              setMessage("");
-              setShowPayment(true);
-            }}>
+            <button
+              onClick={() => {
+                setMessage("");
+                setShowPayment(true);
+              }}
+            >
               Upgrade Plan
             </button>
           )}
