@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loginWithGoogle, createUserDoc } from "./utils/firebase";
 import "./Login.css";
 
 function Login() {
@@ -19,10 +20,7 @@ function Login() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          email,
-          password
-        })
+        body: JSON.stringify({ email, password })
       });
 
       const data = await response.json();
@@ -36,12 +34,50 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       window.dispatchEvent(new Event("userLogin"));
-
       alert("Login successful!");
       navigate("/");
     } catch (error) {
       console.error("Login error:", error);
       setMessage("Unable to connect to the server. Please try again.");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setMessage("");
+
+    try {
+      const googleUser = await loginWithGoogle();
+      await createUserDoc(googleUser);
+
+      const idToken = await googleUser.getIdToken();
+
+      const response = await fetch("http://localhost:3000/google-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ idToken })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(data.message || "Google login failed.");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      window.dispatchEvent(new Event("userLogin"));
+      navigate("/");
+    } catch (error) {
+      console.error("Google login error:", error);
+      setMessage(
+        error.code === "auth/popup-closed-by-user"
+          ? "Google sign-in was cancelled."
+          : "Unable to sign in with Google. Please try again."
+      );
     }
   };
 
@@ -71,12 +107,16 @@ function Login() {
             required
           />
 
-          {message && (
-            <p className="error-message">{message}</p>
-          )}
+          {message && <p className="error-message">{message}</p>}
 
           <button type="submit">Login</button>
         </form>
+
+        <p>or</p>
+
+        <button type="button" onClick={handleGoogleLogin}>
+          Continue with Google
+        </button>
       </div>
     </div>
   );

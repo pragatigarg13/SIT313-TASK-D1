@@ -3,7 +3,9 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 
 import {
@@ -13,7 +15,6 @@ import {
   setDoc
 } from "firebase/firestore";
 
-// Firebase configuration from the .env file
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -23,14 +24,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication
 export const auth = getAuth(app);
-
-// Initialize Firestore database
 export const db = getFirestore(app);
+
+// Google sign-in provider
+const googleProvider = new GoogleAuthProvider();
+
+// Login using Google
+export async function loginWithGoogle() {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+}
 
 // Register using email and password
 export async function signupwithemailandpassword(email, password) {
@@ -42,10 +48,8 @@ export async function loginwithemailandpassword(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
 
-// Alternative email/password login function
 export async function signinAuthUserWithEmailAndPasword(email, password) {
   if (!email || !password) return;
-
   return signInWithEmailAndPassword(auth, email, password);
 }
 
@@ -57,11 +61,9 @@ export async function createUserDoc(userAuth, otherinfo = {}) {
   const userSnapshot = await getDoc(userDocRef);
 
   if (!userSnapshot.exists()) {
-    const { displayName, email } = userAuth;
-
     await setDoc(userDocRef, {
-      displayName: displayName || "",
-      email: email || "",
+      displayName: userAuth.displayName || "",
+      email: userAuth.email || "",
       createdat: new Date(),
       ...otherinfo
     });
