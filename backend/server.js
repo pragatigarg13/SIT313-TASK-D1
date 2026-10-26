@@ -154,6 +154,10 @@ app.post("/upgrade", async (req, res) => {
       });
     }
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not configured");
+    }
+
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -210,7 +214,7 @@ app.post("/subscribe", async (req, res) => {
           user_id: process.env.EMAILJS_PUBLIC_KEY,
           accessToken: process.env.EMAILJS_PRIVATE_KEY,
           template_params: {
-            email
+            subscriber_email: email
           }
         })
       }
