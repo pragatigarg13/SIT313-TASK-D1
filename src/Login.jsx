@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginWithGoogle, createUserDoc } from "./utils/firebase";
+import { loginWithGoogle } from "./utils/firebase";
 import "./Login.css";
 
 function Login() {
@@ -29,7 +29,7 @@ function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage("Incorrect email or password. Please try again.");
+        setMessage(data.message || "Incorrect email or password.");
         return;
       }
 
@@ -37,6 +37,7 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       window.dispatchEvent(new Event("userLogin"));
+
       alert("Login successful!");
       navigate("/");
     } catch (error) {
@@ -49,11 +50,13 @@ function Login() {
     setMessage("");
 
     try {
+      // Sign in with Google through Firebase
       const googleUser = await loginWithGoogle();
-      await createUserDoc(googleUser);
 
+      // Get the Firebase ID token
       const idToken = await googleUser.getIdToken();
 
+      // Send the token to the backend
       const response = await fetch(
         "https://devdeakin-backend-matn.onrender.com/google-login",
         {
@@ -72,13 +75,16 @@ function Login() {
         return;
       }
 
+      // Save the application session
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       window.dispatchEvent(new Event("userLogin"));
+
       navigate("/");
     } catch (error) {
       console.error("Google login error:", error);
+
       setMessage(
         error.code === "auth/popup-closed-by-user"
           ? "Google sign-in was cancelled."
