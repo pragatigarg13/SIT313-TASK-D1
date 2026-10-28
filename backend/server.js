@@ -4,7 +4,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { getAuth } = require("firebase-admin/auth");
 require("dotenv").config();
 
 const serviceAccount = JSON.parse(
@@ -106,7 +105,7 @@ app.post("/login", async (req, res) => {
 
     if (!user.passwordHash) {
       return res.status(401).json({
-        message: "Please sign in using Google"
+        message: "Please use your registered login method"
       });
     }
 
@@ -146,93 +145,6 @@ app.post("/login", async (req, res) => {
     console.error("Login error:", error.message);
     res.status(500).json({
       message: "Unable to log in"
-    });
-  }
-});
-
-// Log in with Google
-app.post("/google-login", async (req, res) => {
-  try {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-      return res.status(400).json({
-        message: "Google ID token is required"
-      });
-    }
-
-    // Verify the Firebase ID token
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-
-    const email = decodedToken.email;
-
-    if (!email || decodedToken.email_verified !== true) {
-      return res.status(401).json({
-        message: "Please use a verified Google account"
-      });
-    }
-
-    const usersRef = db.collection("users");
-
-    const userSnapshot = await usersRef
-      .where("email", "==", email)
-      .limit(1)
-      .get();
-
-    let userDoc;
-
-    if (userSnapshot.empty) {
-      const fullName = decodedToken.name || "";
-      const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
-
-      const newUser = {
-        firstName: nameParts[0] || "Google",
-        lastName: nameParts.slice(1).join(" ") || "User",
-        email,
-        plan: "Free",
-        createdAt: FieldValue.serverTimestamp()
-      };
-
-      const newUserRef = await usersRef.add(newUser);
-
-      userDoc = {
-        id: newUserRef.id,
-        ...newUser
-      };
-    } else {
-      const doc = userSnapshot.docs[0];
-
-      userDoc = {
-        id: doc.id,
-        ...doc.data()
-      };
-    }
-
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not configured");
-    }
-
-    const token = jwt.sign(
-      { userId: userDoc.id, email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({
-      message: "Google login successful",
-      token,
-      user: {
-        id: userDoc.id,
-        firstName: userDoc.firstName,
-        lastName: userDoc.lastName,
-        email: userDoc.email,
-        plan: userDoc.plan || "Free"
-      }
-    });
-  } catch (error) {
-    console.error("Google login error:", error.message);
-    res.status(401).json({
-      message: "Google login failed"
     });
   }
 });

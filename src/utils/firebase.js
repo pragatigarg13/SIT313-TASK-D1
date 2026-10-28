@@ -3,9 +3,7 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup
+  signInWithEmailAndPassword
 } from "firebase/auth";
 
 import {
@@ -29,15 +27,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Google sign-in provider
-const googleProvider = new GoogleAuthProvider();
-
-// Login using Google
-export async function loginWithGoogle() {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
-}
-
 // Register using email and password
 export async function signupwithemailandpassword(email, password) {
   return createUserWithEmailAndPassword(auth, email, password);
@@ -48,8 +37,10 @@ export async function loginwithemailandpassword(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
 
+// Existing email login helper
 export async function signinAuthUserWithEmailAndPasword(email, password) {
   if (!email || !password) return;
+
   return signInWithEmailAndPassword(auth, email, password);
 }
 
